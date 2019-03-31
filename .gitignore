@@ -1,0 +1,6 @@
+
+.vs/*
+logs*
+*.jar
+MusicBot/obj/*
+MusicBot/bin/*
