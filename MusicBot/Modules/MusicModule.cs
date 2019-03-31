@@ -111,22 +111,5 @@ namespace MusicBot.Modules
                 .WithCurrentTimestamp();
             await ReplyAsync(embed: embed.Build());
         }
-
-        [Command("Test")]
-        [RequireOwner]
-        public async Task Test()
-        {
-            //The input
-            var test = "kqtrwqkekqwjeyqwkyekljqwyelkqweliwqyelkwqehliqwyelkqwheqywelqwhelqweoiqwelqwleiuqweuqwe";
-
-            //Regex way
-            var regex = new Regex("[^e]");
-            var newString = regex.Replace(test, "");
-            Console.WriteLine(newString.Length);
-
-            //Linq way
-            var tetste = test.Where(x => x.Equals('e')).Count();
-            Console.WriteLine(tetste);
-        }
     }
 }

@@ -6,6 +6,7 @@ using MusicBot.Core.Entities;
 using MusicBot.Core.Logger;
 using MusicBot.Discord.EntityConverters;
 using MusicBot.Extensions;
+using System;
 using System.Collections.Generic;
 using System.Linq;
 using System.Threading.Tasks;
@@ -17,31 +18,39 @@ namespace MusicBot.Services
     public class MusicService : IServiceExtension
     {
         private DiscordShardedClient _client;
-        private LavaShardClient _lavaSocketClient;
+        private LavaShardClient _lavaShardedClient;
         private LavaRestClient _lavaRestClient;
         private LavaPlayer _player;
         private ILogger _logger;
 
-        public MusicService(DiscordShardedClient client, LavaShardClient lavaSocketClient, LavaRestClient lavaRestClient, ILogger logger)
+        private int _shardsReady = 0;
+
+        public MusicService(DiscordShardedClient client, LavaShardClient LavaShardedClient, LavaRestClient lavaRestClient, ILogger logger)
         {
             _client = client;
-            _lavaSocketClient = lavaSocketClient;
+            _lavaShardedClient = LavaShardedClient;
             _lavaRestClient = lavaRestClient;
             _logger = logger;
         }
 
         public Task InitializeAsync()
         {
-            _client.ShardReady += ClientShardReady; ;
-            _lavaSocketClient.Log += LavaLogAsync;
-            _lavaSocketClient.OnTrackFinished += LavaTrackFinishedAsync;
-            _lavaSocketClient.OnServerStats += DisplayStatsAsync;
+            _client.ShardReady += _client_ShardReady;
+            _lavaShardedClient.Log += LavaLogAsync;
+            _lavaShardedClient.OnTrackFinished += LavaTrackFinishedAsync;
+            _lavaShardedClient.OnServerStats += DisplayStatsAsync;
             return Task.CompletedTask;
         }
 
-        private async Task ClientShardReady(DiscordShardedClient client)
+        private async Task _client_ShardReady(DiscordSocketClient sClient)
         {
-            await _lavaSocketClient.StartAsync(client);
+            _shardsReady++;
+            if (_shardsReady == _client.Shards.Count)
+            {
+                await Task.Delay(500);
+                await _lavaShardedClient.StartAsync(_client);
+                _shardsReady = 0;
+            }
         }
 
         private Task DisplayStatsAsync(ServerStats stats)
@@ -73,14 +82,14 @@ namespace MusicBot.Services
         }
 
         public async Task ConnectAsync(SocketVoiceChannel voiceChannel, ITextChannel textChannel)
-            => await _lavaSocketClient.ConnectAsync(voiceChannel, textChannel);
+            => await _lavaShardedClient.ConnectAsync(voiceChannel, textChannel);
 
         public async Task LeaveAsync()
-            => await _lavaSocketClient.DisposeAsync();
+            => await _lavaShardedClient.DisposeAsync();
 
         public async Task<MusicEmbed> PlayAsync(string search, ulong id)
         {
-            _player = _lavaSocketClient.GetPlayer(id);
+            _player = _lavaShardedClient.GetPlayer(id);
             var musicEmbed = new MusicEmbed();
             var results = await _lavaRestClient.SearchYouTubeAsync(search);
             if (results.LoadType == LoadType.NoMatches ||

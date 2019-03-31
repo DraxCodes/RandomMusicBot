@@ -19,6 +19,7 @@ namespace MusicBot.Discord
 {
     public class MusicBotClient : IMusicBotClient
     {
+        private DiscordShardedClient _client;
         private CommandService _cmdService;
         private IStorage _storage;
         private ILogger _logger;
@@ -27,9 +28,9 @@ namespace MusicBot.Discord
         private DiscordSocketConfig Config = new DiscordSocketConfig
         {
             AlwaysDownloadUsers = true,
-            LogLevel = LogSeverity.Debug,
+            LogLevel = LogSeverity.Info,
             MessageCacheSize = 50,
-            TotalShards = 5
+            TotalShards = 3
         };
 
 
@@ -49,14 +50,14 @@ namespace MusicBot.Discord
         {
             var botConfig = await GetOrCreateBotConfig();
             _services = SetupServices(Config);
-            var client = _services.GetRequiredService<DiscordShardedClient>();
+            _client = _services.GetRequiredService<DiscordShardedClient>();
+
+            await _client.LoginAsync(TokenType.Bot, botConfig.DiscordToken);
+            await _client.StartAsync();
 
             await _services.InitializeServicesAsync();
 
-            await client.LoginAsync(TokenType.Bot, botConfig.DiscordToken);
-            await client.StartAsync();
-
-            client.Log += ClientLogAsync;
+            _client.Log += ClientLogAsync;
 
             await Task.Delay(-1);
         }
@@ -96,7 +97,7 @@ namespace MusicBot.Discord
             .AddSingleton<CommandHandler>()
             .AddSingleton<MusicService>()
             .AddSingleton<LavaRestClient>()
-            .AddSingleton<LavaSocketClient>()
+            .AddSingleton<LavaShardClient>()
             .BuildServiceProvider();
     }
 }
